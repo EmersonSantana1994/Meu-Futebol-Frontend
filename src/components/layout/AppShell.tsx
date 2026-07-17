@@ -20,7 +20,6 @@ import {
 } from "@mui/material";
 import AssistWalkerOutlinedIcon from "@mui/icons-material/AssistWalkerOutlined";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
-import LoginOutlinedIcon from "@mui/icons-material/LoginOutlined";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
 import { modules } from "@/config/modules";
 
@@ -77,15 +76,6 @@ export function AppShell({ children }: AppShellProps) {
             </ListItemButton>
           );
         })}
-      </List>
-      <Divider />
-      <List sx={{ px: 1.5, py: 2 }}>
-        <ListItemButton LinkComponent={Link} href="/login" sx={{ borderRadius: 2 }}>
-          <ListItemIcon>
-            <LoginOutlinedIcon />
-          </ListItemIcon>
-          <ListItemText primary="Sair" />
-        </ListItemButton>
       </List>
     </Box>
   );
