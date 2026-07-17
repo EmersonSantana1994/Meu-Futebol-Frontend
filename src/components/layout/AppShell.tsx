@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ReactNode, useState } from "react";
 import {
@@ -37,7 +38,17 @@ export function AppShell({ children }: AppShellProps) {
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <Stack spacing={1.5} sx={{ p: 2.5 }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
-          <Avatar sx={{ bgcolor: "primary.main", fontWeight: 900 }}>MF</Avatar>
+          <Avatar
+            sx={{
+              bgcolor: "common.white",
+              border: "1px solid",
+              borderColor: "divider",
+              height: 42,
+              width: 42
+            }}
+          >
+            <Image src="/favicon-bola.png" alt="Meu futebol" width={34} height={34} priority />
+          </Avatar>
           <Box>
             <Typography fontWeight={900}>Meu Futebol</Typography>
             <Typography color="text.secondary" variant="caption">
