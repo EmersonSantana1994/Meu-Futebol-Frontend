@@ -3,8 +3,13 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "My Fut",
-  description: "Sistema de campeonatos, rankings e elencos de futebol."
+  title: "Meu Futebol",
+  description: "Sistema de campeonatos, rankings e elencos de futebol.",
+  icons: {
+    icon: "/favicon-bola.png",
+    shortcut: "/favicon-bola.png",
+    apple: "/favicon-bola.png"
+  }
 };
 
 export default function RootLayout({

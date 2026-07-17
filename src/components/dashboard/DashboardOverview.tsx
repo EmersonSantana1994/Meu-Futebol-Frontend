@@ -77,7 +77,7 @@ export function DashboardOverview() {
     <Box>
       <PageHeader
         title="Dashboard"
-        description="Visao geral da temporada, atalhos para os modulos e os principais dados do universo My Fut."
+        description="Visao geral da temporada, atalhos para os modulos e os principais dados do universo Meu Futebol."
       />
 
       {error ? <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert> : null}

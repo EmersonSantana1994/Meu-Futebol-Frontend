@@ -39,7 +39,7 @@ export function AppShell({ children }: AppShellProps) {
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Avatar sx={{ bgcolor: "primary.main", fontWeight: 900 }}>MF</Avatar>
           <Box>
-            <Typography fontWeight={900}>My Fut</Typography>
+            <Typography fontWeight={900}>Meu Futebol</Typography>
             <Typography color="text.secondary" variant="caption">
               Liga de futebol
             </Typography>
