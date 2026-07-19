@@ -26,6 +26,8 @@ import {
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SaveIcon from "@mui/icons-material/Save";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -88,6 +90,7 @@ export function RegistrationsManager() {
   const [playerCountry, setPlayerCountry] = useState("");
   const [playerNumber, setPlayerNumber] = useState("");
   const [playerIsOwner, setPlayerIsOwner] = useState(false);
+  const [editingPlayerId, setEditingPlayerId] = useState<string>();
 
   const [ownerTeamId, setOwnerTeamId] = useState("");
   const [ownerPlayerId, setOwnerPlayerId] = useState("");
@@ -178,23 +181,52 @@ export function RegistrationsManager() {
   async function submitPlayer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await runAction(async () => {
-      await apiRequest("/registrations/players", {
-        method: "POST",
+      await apiRequest(
+        editingPlayerId
+          ? `/registrations/players/${editingPlayerId}`
+          : "/registrations/players",
+        {
+        method: editingPlayerId ? "PATCH" : "POST",
         body: JSON.stringify({
-          teamId: playerTeamId,
+          ...(!editingPlayerId ? { teamId: playerTeamId, isOwner: playerIsOwner } : {}),
           name: playerName,
           position: playerPosition,
           country: playerCountry,
-          number: playerNumber ? Number(playerNumber) : undefined,
-          isOwner: playerIsOwner
+          number: playerNumber ? Number(playerNumber) : undefined
         })
       });
-      setPlayerName("");
-      setPlayerPosition("");
-      setPlayerCountry("");
-      setPlayerNumber("");
-      setPlayerIsOwner(false);
-      setMessage("Jogador cadastrado.");
+      clearPlayerForm();
+      setMessage(editingPlayerId ? "Jogador atualizado." : "Jogador cadastrado.");
+    });
+  }
+
+  function clearPlayerForm() {
+    setEditingPlayerId(undefined);
+    setPlayerTeamId("");
+    setPlayerName("");
+    setPlayerPosition("");
+    setPlayerCountry("");
+    setPlayerNumber("");
+    setPlayerIsOwner(false);
+  }
+
+  function editPlayer(player: Player) {
+    setEditingPlayerId(player.id);
+    setPlayerTeamId(player.teamId ?? "");
+    setPlayerName(player.name);
+    setPlayerPosition(player.position ?? "");
+    setPlayerCountry(player.country ?? "");
+    setPlayerNumber(player.number ? String(player.number) : "");
+    setPlayerIsOwner(player.team?.ownerPlayerId === player.id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function deletePlayer(player: Player) {
+    if (!window.confirm(`Excluir o jogador ${player.name}?`)) return;
+    await runAction(async () => {
+      await apiRequest(`/registrations/players/${player.id}`, { method: "DELETE" });
+      if (editingPlayerId === player.id) clearPlayerForm();
+      setMessage("Jogador excluido.");
     });
   }
 
@@ -294,8 +326,14 @@ export function RegistrationsManager() {
             <SubmitButton label="Salvar time" />
           </FormCard>
 
-          <FormCard title="Jogador" onSubmit={submitPlayer}>
-            <TeamSelect value={playerTeamId} onChange={setPlayerTeamId} teams={teams} required />
+          <FormCard title={editingPlayerId ? "Editar jogador" : "Jogador"} onSubmit={submitPlayer}>
+            <TeamSelect
+              value={playerTeamId}
+              onChange={setPlayerTeamId}
+              teams={teams}
+              required
+              disabled={Boolean(editingPlayerId)}
+            />
             <TextField
               label="Nome do jogador"
               value={playerName}
@@ -342,9 +380,20 @@ export function RegistrationsManager() {
             </Stack>
             <Stack direction="row" alignItems="center" justifyContent="space-between">
               <Typography color="text.secondary">Dono do time</Typography>
-              <Switch checked={playerIsOwner} onChange={(event) => setPlayerIsOwner(event.target.checked)} />
+              <Switch
+                checked={playerIsOwner}
+                onChange={(event) => setPlayerIsOwner(event.target.checked)}
+                disabled={Boolean(editingPlayerId)}
+              />
             </Stack>
-            <SubmitButton label="Salvar jogador" />
+            <Stack direction="row" spacing={1}>
+              <SubmitButton label={editingPlayerId ? "Atualizar jogador" : "Salvar jogador"} />
+              {editingPlayerId ? (
+                <Button type="button" variant="outlined" onClick={clearPlayerForm}>
+                  Cancelar
+                </Button>
+              ) : null}
+            </Stack>
           </FormCard>
         </Stack>
 
@@ -377,6 +426,54 @@ export function RegistrationsManager() {
                 </Button>
               </Box>
             </Stack>
+          </CardContent>
+        </Card>
+
+        <Card variant="outlined">
+          <CardContent>
+            <Typography variant="h3" sx={{ mb: 2 }}>
+              Gerenciar jogadores
+            </Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Nome</TableCell>
+                    <TableCell>Time</TableCell>
+                    <TableCell>Posicao</TableCell>
+                    <TableCell>Pais</TableCell>
+                    <TableCell align="right">Acoes</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {players.map((player) => (
+                    <TableRow key={player.id} hover>
+                      <TableCell sx={{ fontWeight: 700 }}>{player.name}</TableCell>
+                      <TableCell>{player.team?.name ?? "Sem time"}</TableCell>
+                      <TableCell>{player.position ?? "-"}</TableCell>
+                      <TableCell>{player.country ?? "-"}</TableCell>
+                      <TableCell align="right">
+                        <Button
+                          size="small"
+                          startIcon={<EditIcon />}
+                          onClick={() => editPlayer(player)}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          size="small"
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => deletePlayer(player)}
+                        >
+                          Excluir
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </CardContent>
         </Card>
 
@@ -544,15 +641,17 @@ function TeamSelect({
   value,
   onChange,
   teams,
-  required
+  required,
+  disabled
 }: {
   value: string;
   onChange: (value: string) => void;
   teams: Team[];
   required?: boolean;
+  disabled?: boolean;
 }) {
   return (
-    <FormControl fullWidth required={required}>
+    <FormControl fullWidth required={required} disabled={disabled}>
       <InputLabel>Time</InputLabel>
       <Select label="Time" value={value} onChange={(event) => onChange(event.target.value)}>
         {teams.map((team) => (

@@ -96,15 +96,6 @@ export function GoalsAssistsManager() {
     [competitions, competitionId]
   );
   const selectedPlayer = useMemo(() => players.find((player) => player.id === playerId), [players, playerId]);
-  const searchedPlayers = useMemo(() => {
-    const query = normalize(playerQuery);
-    if (!query) return [];
-
-    return players
-      .filter((player) => normalize(`${player.name} ${player.team?.name ?? ""}`).includes(query))
-      .sort((a, b) => exactPlayerMatchScore(b, query) - exactPlayerMatchScore(a, query) || a.name.localeCompare(b.name, "pt-BR"))
-      .slice(0, 8);
-  }, [players, playerQuery]);
   const actionPlayer = selectedPlayer;
   const teams = useMemo(() => {
     const grouped = new Map<string, Team>();
@@ -113,19 +104,6 @@ export function GoalsAssistsManager() {
     }
     return [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }, [players]);
-  const filteredPlayers = useMemo(() => {
-    const query = normalize(playerQuery);
-    const rankedPlayerIds = new Set(
-      competitionStats
-        .filter((stat) => stat.goals > 0 || stat.assists > 0)
-        .map((stat) => stat.player.id)
-    );
-
-    return players
-      .filter((player) => rankedPlayerIds.has(player.id))
-      .filter((player) => !query || normalize(`${player.name} ${player.team?.name ?? ""}`).includes(query))
-      .slice(0, 18);
-  }, [competitionStats, players, playerQuery]);
   const filteredTeams = useMemo(() => {
     const query = normalize(teamQuery);
     return teams.filter((team) => !query || normalize(team.name).includes(query)).slice(0, 8);
@@ -318,11 +296,6 @@ export function GoalsAssistsManager() {
     }
   }
 
-  function selectPlayer(player: Player) {
-    setPlayerId(player.id);
-    setPlayerQuery(player.name);
-  }
-
   function searchTeam() {
     const team = filteredTeams[0];
     if (!team) {
@@ -368,13 +341,13 @@ export function GoalsAssistsManager() {
         description="Lancamento rapido de gols e assistencias, placar eletronico e rankings do torneio."
       />
 
-      <Stack spacing={3}>
+      <Stack spacing={2}>
         {message ? <Alert severity="success">{message}</Alert> : null}
         {error ? <Alert severity="error">{error}</Alert> : null}
 
         <Card variant="outlined">
-          <CardContent>
-            <Stack spacing={2}>
+          <CardContent sx={{ py: 2, "&:last-child": { pb: 2 } }}>
+            <Stack spacing={1.5}>
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                 <FormControl fullWidth>
                   <InputLabel>Campeonato</InputLabel>
@@ -436,16 +409,6 @@ export function GoalsAssistsManager() {
               <Typography color="text.secondary" variant="body2">
                 Selecionado: {actionPlayer ? `${actionPlayer.name} - ${actionPlayer.team?.name ?? "-"}` : "nenhum jogador"}.
               </Typography>
-
-              <PlayerPickerTable
-                players={filteredPlayers}
-                selectedPlayerId={playerId}
-                onSelect={selectPlayer}
-                onGoal={registerGoal}
-                onAssist={registerAssist}
-                onRemoveGoal={requestRemoveGoal}
-                onRemoveAssist={requestRemoveAssist}
-              />
             </Stack>
           </CardContent>
         </Card>
@@ -545,8 +508,24 @@ export function GoalsAssistsManager() {
         </Stack>
 
         <Stack direction={{ xs: "column", lg: "row" }} spacing={2}>
-          <RankingCard title="Ranking de artilheiros do torneio" stats={goalRanking} metric="goals" />
-          <RankingCard title="Ranking de assistencias do torneio" stats={assistRanking} metric="assists" />
+          <RankingCard
+            title="Ranking de artilheiros do torneio"
+            stats={goalRanking}
+            metric="goals"
+            onGoal={registerGoal}
+            onAssist={registerAssist}
+            onRemoveGoal={requestRemoveGoal}
+            onRemoveAssist={requestRemoveAssist}
+          />
+          <RankingCard
+            title="Ranking de assistencias do torneio"
+            stats={assistRanking}
+            metric="assists"
+            onGoal={registerGoal}
+            onAssist={registerAssist}
+            onRemoveGoal={requestRemoveGoal}
+            onRemoveAssist={requestRemoveAssist}
+          />
         </Stack>
       </Stack>
 
@@ -586,89 +565,6 @@ export function GoalsAssistsManager() {
   );
 }
 
-function PlayerPickerTable({
-  players,
-  selectedPlayerId,
-  onSelect,
-  onGoal,
-  onAssist,
-  onRemoveGoal,
-  onRemoveAssist
-}: {
-  players: Player[];
-  selectedPlayerId: string;
-  onSelect: (player: Player) => void;
-  onGoal: (playerId: string) => Promise<void>;
-  onAssist: (playerId: string) => Promise<void>;
-  onRemoveGoal: (playerId: string) => void;
-  onRemoveAssist: (playerId: string) => void;
-}) {
-  return (
-    <TableContainer>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Jogador</TableCell>
-            <TableCell>Time</TableCell>
-            <TableCell align="right">Acao rapida</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {players.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={3}>
-                <Typography color="text.secondary">
-                  Nenhum jogador com gol ou assistencia neste campeonato ainda.
-                </Typography>
-              </TableCell>
-            </TableRow>
-          ) : null}
-          {players.map((player) => (
-            <TableRow
-              key={player.id}
-              hover
-              selected={player.id === selectedPlayerId}
-              onClick={() => onSelect(player)}
-              sx={{ cursor: "pointer" }}
-            >
-              <TableCell sx={{ fontWeight: 800 }}>{player.name}</TableCell>
-              <TableCell>{player.team?.name ?? "-"}</TableCell>
-              <TableCell align="right">
-                <Stack direction="row" justifyContent="flex-end" spacing={1}>
-                  <Button size="small" variant="contained" onClick={(event) => {
-                    event.stopPropagation();
-                    void onGoal(player.id);
-                  }}>
-                    Gol
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={(event) => {
-                    event.stopPropagation();
-                    void onAssist(player.id);
-                  }}>
-                    Assist.
-                  </Button>
-                  <Button size="small" color="error" variant="outlined" onClick={(event) => {
-                    event.stopPropagation();
-                    void onRemoveGoal(player.id);
-                  }}>
-                    - Gol
-                  </Button>
-                  <Button size="small" color="error" variant="outlined" onClick={(event) => {
-                    event.stopPropagation();
-                    void onRemoveAssist(player.id);
-                  }}>
-                    - Assist.
-                  </Button>
-                </Stack>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
-}
-
 function TournamentTotalCard({ label, value }: { label: string; value: number }) {
   return (
     <Card variant="outlined" sx={{ flex: 1 }}>
@@ -684,7 +580,23 @@ function TournamentTotalCard({ label, value }: { label: string; value: number })
   );
 }
 
-function RankingCard({ title, stats, metric }: { title: string; stats: PlayerStat[]; metric: "goals" | "assists" }) {
+function RankingCard({
+  title,
+  stats,
+  metric,
+  onGoal,
+  onAssist,
+  onRemoveGoal,
+  onRemoveAssist
+}: {
+  title: string;
+  stats: PlayerStat[];
+  metric: "goals" | "assists";
+  onGoal: (playerId: string) => Promise<void>;
+  onAssist: (playerId: string) => Promise<void>;
+  onRemoveGoal: (playerId: string) => void;
+  onRemoveAssist: (playerId: string) => void;
+}) {
   return (
     <Card variant="outlined" sx={{ flex: 1 }}>
       <CardContent>
@@ -697,7 +609,7 @@ function RankingCard({ title, stats, metric }: { title: string; stats: PlayerSta
             <TableHead>
               <TableRow>
                 <TableCell>#</TableCell>
-                <TableCell>Jogador</TableCell>
+                <TableCell>Jogador e acoes</TableCell>
                 <TableCell>Time</TableCell>
                 <TableCell>{metric === "goals" ? "Gols" : "Assist."}</TableCell>
               </TableRow>
@@ -706,7 +618,34 @@ function RankingCard({ title, stats, metric }: { title: string; stats: PlayerSta
               {stats.map((stat, index) => (
                 <TableRow key={stat.id} hover>
                   <TableCell>{index + 1}</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>{stat.player.name}</TableCell>
+                  <TableCell>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      spacing={1}
+                      useFlexGap
+                      flexWrap="wrap"
+                      sx={{ minWidth: { md: 330 } }}
+                    >
+                      <Typography component="span" fontWeight={800} sx={{ minWidth: 80 }}>
+                        {stat.player.name}
+                      </Typography>
+                      <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+                        <Button size="small" variant="contained" onClick={() => void onGoal(stat.player.id)}>
+                          Gol
+                        </Button>
+                        <Button size="small" variant="outlined" onClick={() => void onAssist(stat.player.id)}>
+                          Assist.
+                        </Button>
+                        <Button size="small" color="error" variant="outlined" onClick={() => onRemoveGoal(stat.player.id)}>
+                          - Gol
+                        </Button>
+                        <Button size="small" color="error" variant="outlined" onClick={() => onRemoveAssist(stat.player.id)}>
+                          - Assist.
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  </TableCell>
                   <TableCell>{stat.player.team?.name ?? "-"}</TableCell>
                   <TableCell>{stat[metric]}</TableCell>
                 </TableRow>
@@ -725,12 +664,6 @@ function normalize(value: string) {
 
 function normalizeExactPlayerName(value: string) {
   return value.trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
-}
-
-function exactPlayerMatchScore(player: Player, query: string) {
-  if (normalize(player.name) === query) return 2;
-  if (normalize(player.name).startsWith(query)) return 1;
-  return 0;
 }
 
 function sortByGoals(a: PlayerStat, b: PlayerStat) {
