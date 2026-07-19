@@ -12,10 +12,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
   Table,
   TableBody,
@@ -174,23 +170,25 @@ export function GoalsAssistsManager() {
 
   async function registerGoal(targetPlayerId = playerId) {
     if (!competitionId || !targetPlayerId) return;
+    const playerName = players.find((player) => player.id === targetPlayerId)?.name ?? "Jogador";
     await runAction(async () => {
       await apiRequest("/rankings/goals", {
         method: "POST",
         body: JSON.stringify({ competitionId, playerId: targetPlayerId })
       });
-      setMessage("Gol registrado e placar atualizado.");
+      setMessage(`Gol de ${playerName} registrado e placar atualizado.`);
     });
   }
 
   async function registerAssist(targetPlayerId = playerId) {
     if (!competitionId || !targetPlayerId) return;
+    const playerName = players.find((player) => player.id === targetPlayerId)?.name ?? "Jogador";
     await runAction(async () => {
       await apiRequest("/rankings/assists", {
         method: "POST",
         body: JSON.stringify({ competitionId, playerId: targetPlayerId })
       });
-      setMessage("Assistencia registrada.");
+      setMessage(`Assistência de ${playerName} registrada.`);
     });
   }
 
@@ -348,32 +346,22 @@ export function GoalsAssistsManager() {
         <Card variant="outlined">
           <CardContent sx={{ py: 2, "&:last-child": { pb: 2 } }}>
             <Stack spacing={1.5}>
-              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                <FormControl fullWidth>
-                  <InputLabel>Campeonato</InputLabel>
-                  <Select label="Campeonato" value={competitionId} onChange={(event) => setCompetitionId(event.target.value)}>
-                    {competitions.map((competition) => (
-                      <MenuItem key={competition.id} value={competition.id}>
-                        {competition.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <TextField
-                  fullWidth
-                  label="Pesquisar jogador"
-                  value={playerQuery}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    const exactPlayer = players.find(
-                      (player) => normalizeExactPlayerName(player.name) === normalizeExactPlayerName(value)
-                    );
-                    setPlayerQuery(value);
-                    setPlayerId(exactPlayer?.id ?? "");
-                  }}
-                  onKeyDown={handlePlayerShortcut}
-                />
-              </Stack>
+              <TextField
+                fullWidth
+                autoFocus
+                label="Pesquisar jogador"
+                placeholder="Digite o nome do jogador"
+                value={playerQuery}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  const exactPlayer = players.find(
+                    (player) => normalizeExactPlayerName(player.name) === normalizeExactPlayerName(value)
+                  );
+                  setPlayerQuery(value);
+                  setPlayerId(exactPlayer?.id ?? "");
+                }}
+                onKeyDown={handlePlayerShortcut}
+              />
 
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                 <Button
@@ -457,54 +445,6 @@ export function GoalsAssistsManager() {
             </CardContent>
           </Card>
 
-          <Card variant="outlined" sx={{ flex: 1 }}>
-            <CardContent>
-              <Typography variant="h3" sx={{ mb: 2 }}>
-                Buscar jogadores por time
-              </Typography>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                <TextField
-                  fullWidth
-                  label="Nome do time"
-                  value={teamQuery}
-                  onChange={(event) => setTeamQuery(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      searchTeam();
-                    }
-                  }}
-                />
-                <Button variant="outlined" startIcon={<SearchIcon />} onClick={searchTeam} sx={{ minWidth: 130 }}>
-                  Pesquisar
-                </Button>
-              </Stack>
-              <Divider sx={{ my: 2 }} />
-              {searchedTeam ? (
-                <Stack spacing={1}>
-                  <Typography fontWeight={800}>{searchedTeam.name}</Typography>
-                  {searchedTeamPlayers.map((player) => (
-                    <Typography key={player.id} color="text.secondary">
-                      {player.name}
-                    </Typography>
-                  ))}
-                </Stack>
-              ) : (
-                <Typography color="text.secondary">Pesquise um time para ver o elenco.</Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Stack>
-
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TournamentTotalCard
-            label="Gols totais do torneio"
-            value={competitionStats.reduce((total, stat) => total + stat.goals, 0)}
-          />
-          <TournamentTotalCard
-            label="Assistências totais do torneio"
-            value={competitionStats.reduce((total, stat) => total + stat.assists, 0)}
-          />
         </Stack>
 
         <Stack direction={{ xs: "column", lg: "row" }} spacing={2}>
@@ -527,6 +467,55 @@ export function GoalsAssistsManager() {
             onRemoveAssist={requestRemoveAssist}
           />
         </Stack>
+
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <TournamentTotalCard
+            label="Gols totais do torneio"
+            value={competitionStats.reduce((total, stat) => total + stat.goals, 0)}
+          />
+          <TournamentTotalCard
+            label="Assistências totais do torneio"
+            value={competitionStats.reduce((total, stat) => total + stat.assists, 0)}
+          />
+        </Stack>
+
+        <Card variant="outlined">
+          <CardContent>
+            <Typography variant="h3" sx={{ mb: 2 }}>
+              Buscar jogadores por time
+            </Typography>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <TextField
+                fullWidth
+                label="Nome do time"
+                value={teamQuery}
+                onChange={(event) => setTeamQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    searchTeam();
+                  }
+                }}
+              />
+              <Button variant="outlined" startIcon={<SearchIcon />} onClick={searchTeam} sx={{ minWidth: 130 }}>
+                Pesquisar
+              </Button>
+            </Stack>
+            <Divider sx={{ my: 2 }} />
+            {searchedTeam ? (
+              <Stack spacing={1}>
+                <Typography fontWeight={800}>{searchedTeam.name}</Typography>
+                {searchedTeamPlayers.map((player) => (
+                  <Typography key={player.id} color="text.secondary">
+                    {player.name}
+                  </Typography>
+                ))}
+              </Stack>
+            ) : (
+              <Typography color="text.secondary">Pesquise um time para ver o elenco.</Typography>
+            )}
+          </CardContent>
+        </Card>
       </Stack>
 
       <Dialog open={scoreboardPromptOpen} onClose={() => setScoreboardPromptOpen(false)} maxWidth="xs" fullWidth>
